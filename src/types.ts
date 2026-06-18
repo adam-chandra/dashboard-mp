@@ -155,3 +155,32 @@ export interface RingkasanResponse {
   toko_top_growth: TokoBreakdown | null;
   toko_bottom_growth: TokoBreakdown | null;
 }
+
+export interface SummaryPair {
+  sekarang: number;
+  lalu: number;
+}
+
+export interface SummaryKanalRow {
+  kanal: string;
+  omset_sekarang: number;
+  omset_lalu: number;
+}
+
+export interface SummaryTokoRow {
+  nama_toko: string;
+  kanal: string;
+  omset_sekarang: number;
+  omset_lalu: number;
+}
+
+export interface SummaryDrawerData {
+  scope: string;
+  periode_sekarang: string;
+  periode_lalu: string;
+  omset: SummaryPair;
+  qty: SummaryPair;
+  per_kanal: SummaryKanalRow[];
+  toko_top_growth: SummaryTokoRow | null;
+  toko_bottom_growth: SummaryTokoRow | null;
+}

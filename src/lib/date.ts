@@ -23,10 +23,16 @@ export function shiftPrevMonth(start: string, end: string): { mulai: string; sel
   return { mulai: formatDateISO(prevStart), selesai: formatDateISO(prevEnd) };
 }
 
+const ID_MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function formatLabelOne(iso: string): string {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getDate()} ${ID_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 export function formatRangeLabel(start: string, end: string): string {
-  if (!start || !end) return '';
-  const s = new Date(start);
-  const e = new Date(end);
-  const fmt = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-  return `${fmt.format(s)} - ${fmt.format(e)}`;
+  if (!start && !end) return '';
+  return `${formatLabelOne(start)} - ${formatLabelOne(end)}`;
 }

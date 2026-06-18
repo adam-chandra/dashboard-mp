@@ -1,5 +1,4 @@
 import { memo, useMemo } from 'react';
-import { useRingkasanQuery } from '../hooks/useAnalyticsQueries';
 import { useDashboardStore } from '../store/dashboard';
 import {
   calcGrowth,
@@ -9,24 +8,24 @@ import {
   growthLabel,
   growthVerb,
 } from '../lib/format';
-import { sanitizeMulti } from '../lib/filters';
 
 function SummaryDrawerImpl() {
   const open = useDashboardStore((s) => s.summaryOpen);
+  const loading = useDashboardStore((s) => s.summaryLoading);
+  const error = useDashboardStore((s) => s.summaryError);
+  const data = useDashboardStore((s) => s.summaryData);
   const toggle = useDashboardStore((s) => s.toggleSummary);
-  const filter = useDashboardStore((s) => s.filter);
-
-  const isAllKanal = sanitizeMulti(filter.kanal).length === 0;
-  const { data, isFetching, isError, refetch } = useRingkasanQuery(open);
+  const openSummary = useDashboardStore((s) => s.openSummary);
 
   const totalGrowth = useMemo(
-    () => calcGrowth(data?.total_omset ?? 0, data?.total_omset_lalu ?? 0),
+    () => calcGrowth(data?.omset.sekarang ?? 0, data?.omset.lalu ?? 0),
     [data]
   );
   const qtyGrowth = useMemo(
-    () => calcGrowth(data?.total_qty ?? 0, data?.total_qty_lalu ?? 0),
+    () => calcGrowth(data?.qty.sekarang ?? 0, data?.qty.lalu ?? 0),
     [data]
   );
+  const showKanal = useMemo(() => (data?.per_kanal?.length ?? 0) > 0, [data]);
 
   return (
     <aside
@@ -35,7 +34,14 @@ function SummaryDrawerImpl() {
     >
       <div className="w-[440px] h-full overflow-y-auto custom-scroll">
         <div className="p-4 flex items-center justify-between sticky top-0 bg-white border-b border-zinc-100 z-10">
-          <h3 className="text-sm font-bold text-zinc-800">Ringkasan AI</h3>
+          <div>
+            <h3 className="text-sm font-bold text-zinc-800">Ringkasan AI</h3>
+            {data?.scope && (
+              <p className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                Scope: <b className="text-zinc-600">{data.scope}</b>
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => toggle(false)}
@@ -46,15 +52,15 @@ function SummaryDrawerImpl() {
         </div>
 
         <div className="p-4 flex flex-col gap-3">
-          {isFetching && (
+          {loading && (
             <div className="text-xs text-zinc-500 animate-pulse">Memuat ringkasan…</div>
           )}
-          {isError && (
+          {error && !loading && (
             <button
               className="text-xs text-rose-600 underline self-start"
-              onClick={() => refetch()}
+              onClick={() => void openSummary()}
             >
-              Gagal memuat. Coba lagi.
+              {error}. Coba lagi.
             </button>
           )}
 
@@ -64,12 +70,16 @@ function SummaryDrawerImpl() {
                 <div className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
                   Perbandingan Omset MoM
                 </div>
+                <div className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  {data.periode_sekarang} <span className="text-zinc-300">vs</span>{' '}
+                  {data.periode_lalu}
+                </div>
                 <div className="mt-1 text-lg font-bold text-zinc-800">
-                  {formatRupiahShort(data.total_omset)}
+                  {formatRupiahShort(data.omset.sekarang)}
                 </div>
                 <div className={`text-xs ${growthClass(totalGrowth)}`}>
-                  {growthLabel(totalGrowth)} {growthVerb(totalGrowth)} vs bulan lalu (
-                  {formatRupiahShort(data.total_omset_lalu)})
+                  {growthLabel(totalGrowth)} {growthVerb(totalGrowth)} vs periode lalu (
+                  {formatRupiahShort(data.omset.lalu)})
                 </div>
               </div>
 
@@ -78,50 +88,74 @@ function SummaryDrawerImpl() {
                   Jumlah Produk Terjual
                 </div>
                 <div className="mt-1 text-lg font-bold text-zinc-800">
-                  {formatAngka(data.total_qty)} Pcs
+                  {formatAngka(data.qty.sekarang)} Pcs
                 </div>
                 <div className={`text-xs ${growthClass(qtyGrowth)}`}>
-                  {growthLabel(qtyGrowth)} vs {formatAngka(data.total_qty_lalu)} pcs bulan lalu
+                  {growthLabel(qtyGrowth)} vs {formatAngka(data.qty.lalu)} pcs periode lalu
                 </div>
               </div>
 
               {data.toko_top_growth && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
                   <div className="text-[10px] font-bold tracking-wider text-emerald-700 uppercase">
                     Top Growth Outlet
                   </div>
                   <div className="mt-1 font-semibold text-zinc-800">
-                    {data.toko_top_growth.toko}
+                    {data.toko_top_growth.nama_toko}
                   </div>
                   <div className="text-xs text-zinc-600">
                     {data.toko_top_growth.kanal} ·{' '}
                     {formatRupiahShort(data.toko_top_growth.omset_sekarang)}
                   </div>
-                  <div className={`text-xs ${growthClass(data.toko_top_growth.growth ?? 0)}`}>
-                    {growthLabel(data.toko_top_growth.growth ?? 0)}
+                  <div
+                    className={`text-xs ${growthClass(
+                      calcGrowth(
+                        data.toko_top_growth.omset_sekarang,
+                        data.toko_top_growth.omset_lalu
+                      )
+                    )}`}
+                  >
+                    {growthLabel(
+                      calcGrowth(
+                        data.toko_top_growth.omset_sekarang,
+                        data.toko_top_growth.omset_lalu
+                      )
+                    )}
                   </div>
                 </div>
               )}
 
               {data.toko_bottom_growth && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+                <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-4">
                   <div className="text-[10px] font-bold tracking-wider text-rose-700 uppercase">
                     Butuh Perhatian
                   </div>
                   <div className="mt-1 font-semibold text-zinc-800">
-                    {data.toko_bottom_growth.toko}
+                    {data.toko_bottom_growth.nama_toko}
                   </div>
                   <div className="text-xs text-zinc-600">
                     {data.toko_bottom_growth.kanal} ·{' '}
                     {formatRupiahShort(data.toko_bottom_growth.omset_sekarang)}
                   </div>
-                  <div className={`text-xs ${growthClass(data.toko_bottom_growth.growth ?? 0)}`}>
-                    {growthLabel(data.toko_bottom_growth.growth ?? 0)}
+                  <div
+                    className={`text-xs ${growthClass(
+                      calcGrowth(
+                        data.toko_bottom_growth.omset_sekarang,
+                        data.toko_bottom_growth.omset_lalu
+                      )
+                    )}`}
+                  >
+                    {growthLabel(
+                      calcGrowth(
+                        data.toko_bottom_growth.omset_sekarang,
+                        data.toko_bottom_growth.omset_lalu
+                      )
+                    )}
                   </div>
                 </div>
               )}
 
-              {isAllKanal && data.per_kanal?.length > 0 && (
+              {showKanal && (
                 <div className="rounded-xl border border-zinc-200 p-4">
                   <div className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase mb-2">
                     Breakdown per Kanal

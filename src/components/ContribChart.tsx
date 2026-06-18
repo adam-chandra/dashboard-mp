@@ -3,59 +3,80 @@ import ReactECharts from 'echarts-for-react';
 import type { ContribItem } from '../types';
 import { formatRupiahShort } from '../lib/format';
 
+export const CONTRIB_PALETTE = [
+  '#4f46e5', '#0ea5e9', '#1e293b', '#7c3aed', '#06b6d4',
+  '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b',
+];
+
 interface Props {
   data: ContribItem[] | undefined;
   title: string;
   loading?: boolean;
 }
 
-const PALETTE = [
-  '#2563eb', '#d97706', '#16a34a', '#9333ea', '#dc2626',
-  '#0891b2', '#ca8a04', '#7c3aed', '#db2777', '#15803d',
-  '#0284c7', '#ea580c',
-];
-
 function ContribChartImpl({ data, title, loading }: Props) {
+  const rows = useMemo(() => (data ?? []).slice(0, 12), [data]);
+  const total = useMemo(
+    () => rows.reduce((s, x) => s + (Number(x.omset) || 0), 0),
+    [rows]
+  );
+
   const option = useMemo(() => {
-    const rows = (data ?? []).slice(0, 12);
     return {
       animationDuration: 400,
       tooltip: {
         trigger: 'item',
-        formatter: (p: { name: string; value: number; percent: number }) =>
-          `<div style="font-weight:600">${p.name}</div>
-           <div>Omset: <b>${formatRupiahShort(p.value)}</b></div>
-           <div>Kontribusi: <b>${p.percent.toFixed(1)}%</b></div>`,
+        formatter: (p: { name: string; value: number }) => {
+          const pct = total > 0 ? (p.value / total) * 100 : 0;
+          return `<b>${p.name}</b><br/>${formatRupiahShort(p.value)}<br/>${pct.toFixed(1)}% kontribusi`;
+        },
+        textStyle: { fontSize: 11 },
       },
-      legend: { type: 'scroll', orient: 'vertical', right: 10, top: 'middle', textStyle: { fontSize: 10 } },
+      legend: {
+        orient: 'vertical',
+        right: 0,
+        top: 'middle',
+        itemWidth: 10,
+        itemHeight: 10,
+        textStyle: { fontSize: 11, color: '#52525b' },
+      },
       series: [
         {
           name: title,
           type: 'pie',
-          radius: ['45%', '70%'],
+          radius: ['52%', '78%'],
           center: ['38%', '50%'],
-          avoidLabelOverlap: true,
+          avoidLabelOverlap: false,
           itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
           label: { show: false },
           labelLine: { show: false },
           data: rows.map((r, i) => ({
             name: r.label || 'Lainnya',
-            value: r.omset || 0,
-            itemStyle: { color: PALETTE[i % PALETTE.length] },
+            value: Number(r.omset) || 0,
+            itemStyle: { color: CONTRIB_PALETTE[i % CONTRIB_PALETTE.length] },
           })),
         },
       ],
     };
-  }, [data, title]);
+  }, [rows, total, title]);
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold tracking-wider text-zinc-700 uppercase">{title}</h3>
-        {loading && <span className="text-xs text-zinc-400 animate-pulse">memuat…</span>}
-      </div>
-      <div style={{ height: 280 }}>
-        <ReactECharts option={option} notMerge style={{ height: '100%', width: '100%' }} opts={{ renderer: 'canvas' }} />
+    <div className="flex flex-col">
+      <div style={{ height: 260 }}>
+        {loading && rows.length === 0 ? (
+          <div className="h-full w-full rounded-lg bg-zinc-50 animate-pulse" />
+        ) : rows.length === 0 ? (
+          <div className="h-full w-full flex items-center justify-center text-xs text-zinc-400 italic border border-dashed border-zinc-200 rounded-lg">
+            Tidak ada data.
+          </div>
+        ) : (
+          <ReactECharts
+            option={option}
+            notMerge
+            style={{ height: '100%', width: '100%' }}
+            opts={{ renderer: 'canvas' }}
+          />
+        )}
       </div>
     </div>
   );

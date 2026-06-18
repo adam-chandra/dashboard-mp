@@ -20,11 +20,13 @@ export const DEFAULT_METRIK: MetrikResponse = {
 };
 
 export const KPI_LIST = [
-  { key: 'gmv', title: 'Omset', unit: 'IDR', color: 'sky' },
-  { key: 'qty', title: 'Jumlah Produk', unit: 'Pcs', color: 'amber' },
-  { key: 'sku', title: 'SKU Aktif', unit: 'SKU', color: 'violet' },
-  { key: 'pesanan', title: 'Total Pesanan', unit: 'Order', color: 'emerald' },
+  { key: 'gmv', title: 'GMV', unit: 'IDR', color: 'sky' },
+  { key: 'qty', title: 'Quantity Pcs', unit: 'Pcs', color: 'amber' },
+  { key: 'sku', title: 'Active SKU', unit: 'SKU', color: 'violet' },
+  { key: 'pesanan', title: 'Total Order', unit: 'Invoices', color: 'emerald' },
 ] as const;
+
+export const NPL_CODES = ['BKL-R01', 'CKM-R01', 'ETH-R01', 'GTF-R01', 'LIN-S04', 'ETF-R01'] as const;
 
 export const ITEMS_PER_PAGE = 30;
 export const SEARCH_DEBOUNCE_MS = 500;
